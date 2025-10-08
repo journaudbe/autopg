@@ -1,0 +1,51 @@
+version: "3.8"
+services:
+  postgres_a:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secretA
+    volumes:
+      - pgdata_a:/var/lib/postgresql/data
+
+  postgres_b:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secretB
+    volumes:
+      - pgdata_b:/var/lib/postgresql/data
+
+  autopg:
+    build: .
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # credentials for target named "myserverpg" and "otherpg"
+      AUTOPG_MYSERVERPG_HOST: "postgres_a"
+      AUTOPG_MYSERVERPG_PORT: "5432"
+      AUTOPG_MYSERVERPG_ADMIN: "postgres"
+      AUTOPG_MYSERVERPG_ADMIN_PASS: "secretA"
+
+      AUTOPG_OTHERPG_HOST: "postgres_b"
+      AUTOPG_OTHERPG_PORT: "5432"
+      AUTOPG_OTHERPG_ADMIN: "postgres"
+      AUTOPG_OTHERPG_ADMIN_PASS: "secretB"
+
+  app:
+    image: alpine:latest
+    command: ["sleep","3600"]
+    labels:
+      autopg.monserverpostgre.db: "appdb"
+      autopg.monserverpostgre.user: "appuser"
+      autopg.monserverpostgre.pass: "apppass"
+      autopg.otherpg.db: "otherdb"
+      autopg.otherpg.user: "otheruser"
+      autopg.otherpg.pass: "otherpass"
+    depends_on:
+      - postgres_a
+      - postgres_b
+
+volumes:
+  pgdata_a:
+  pgdata_b:
